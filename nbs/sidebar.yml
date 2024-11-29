@@ -3,3 +3,6 @@ website:
     contents:
       - index.ipynb
       - 00_task.ipynb
+      - 01_ocm.ipynb
+      - 02_describe.ipynb
+      - 04_utils.ipynb
