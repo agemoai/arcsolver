@@ -18,6 +18,12 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from io import BytesIO
 import base64
 
+# %% ../nbs/00_task.ipynb 4
+try:
+    module_dir = Path(os.path.dirname(__file__))
+except NameError:
+    module_dir = Path(os.getcwd())
+
 # %% ../nbs/00_task.ipynb 5
 class ArcGrid:
     "A single ARC grid"
@@ -220,9 +226,9 @@ class ArcTask:
         if split not in ['train', 'eval']:
             raise ValueError("`split` must be either 'train' or 'eval'")
         if data_dir is None:
-            file = Path(__file__).resolve()
+            # file = Path(__file__).resolve()
             data_split = 'training' if split == 'train' else 'evaluation'
-            data_dir = file.parent.parent / f"arc_data/data/{data_split}"
+            data_dir = module_dir.parent / f"arc_data/data/{data_split}"
         
         self.task_id, self.split, self.data_dir = task_id, split, Path(data_dir)
         self.train, self.test = self._load_data()
@@ -288,5 +294,5 @@ class ArcTask:
 # %% ../nbs/00_task.ipynb 26
 #| eval: false
 # Let's store the training and eval test ids so they can be easily used elsewhere
-train_tasks = [f.split('.json')[0] for f in os.listdir(Path(__file__).resolve().parent.parent / "arc_data/data/training")]
-eval_tasks = [f.split('.json')[0] for f in os.listdir(Path(__file__).resolve().parent.parent / "arc_data/data/evaluation")]
+train_tasks = [f.split('.json')[0] for f in os.listdir(module_dir.parent / "arc_data/data/training")]
+eval_tasks = [f.split('.json')[0] for f in os.listdir(module_dir.parent / "arc_data/data/evaluation")]
