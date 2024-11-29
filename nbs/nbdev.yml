@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "arcsolver"
+  site-url: "https://agemoai.github.io/arcsolver"
+  description: "A Python library for automatically solving Abstraction and Reasoning Corpus (ARC) challenges using Claude and object-centric modeling."
+  repo-branch: main
+  repo-url: "https://github.com/agemoai/arcsolver"
