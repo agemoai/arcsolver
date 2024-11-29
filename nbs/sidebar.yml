@@ -5,4 +5,7 @@ website:
       - 00_task.ipynb
       - 01_ocm.ipynb
       - 02_describe.ipynb
+      - 03_solve.ipynb
       - 04_utils.ipynb
+      - 05_examples.ipynb
+      - 06_score.ipynb
