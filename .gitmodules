@@ -1,0 +1,3 @@
+[submodule "arc_data"]
+	path = arc_data
+	url = https://github.com/fchollet/ARC-AGI.git
