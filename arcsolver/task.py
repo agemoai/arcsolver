@@ -19,7 +19,7 @@ from io import BytesIO
 import base64
 import importlib.resources as resources
 
-# %% ../nbs/00_task.ipynb 5
+# %% ../nbs/00_task.ipynb 4
 class ArcGrid:
     "A single ARC grid"
     # Class-level color mapping
@@ -113,12 +113,12 @@ class ArcGrid:
             ax.axhline(y, color='w', linewidth=1.5,
                        xmin=0, xmax=self.shape[1]/max_width)
 
-# %% ../nbs/00_task.ipynb 13
+# %% ../nbs/00_task.ipynb 12
 @patch
 def __eq__(self: ArcGrid, other: ArcGrid) -> bool:
     return np.array_equal(self.data, other.data)
 
-# %% ../nbs/00_task.ipynb 15
+# %% ../nbs/00_task.ipynb 14
 class ArcPair:
     "A pair of ARC grids, typically [input, output]. Can also be used for [output, prediction]"
     def __init__(self,
@@ -210,7 +210,7 @@ class ArcPair:
                          linewidth=1)
         fig.add_artist(line)
 
-# %% ../nbs/00_task.ipynb 19
+# %% ../nbs/00_task.ipynb 18
 class ArcTask:
     "An ARC task"
     def __init__(self,
@@ -222,7 +222,7 @@ class ArcTask:
             raise ValueError("`split` must be either 'train' or 'eval'")
         if data_dir is None:
             data_split = 'training' if split == 'train' else 'evaluation'
-            pkg_files = resources.files("arcsolver").parent
+            pkg_files = resources.files("arcsolver")
             data_dir = pkg_files / "arc_data" / "data" / data_split
         
         self.task_id, self.split, self.data_dir = task_id, split, Path(data_dir)
@@ -286,15 +286,15 @@ class ArcTask:
             plt.show()
             return None
 
-# %% ../nbs/00_task.ipynb 26
+# %% ../nbs/00_task.ipynb 25
 def get_task_files(split: str  # 'train' or 'eval'
                   ) -> list[str]:
     "Get list of files from either training or evaluation data."
     data_split = 'training' if split == 'train' else 'evaluation'
-    pkg_files = resources.files("arcsolver").parent
+    pkg_files = resources.files("arcsolver")
     data_path = pkg_files / "arc_data" / "data" / data_split
     return [f.split('.json')[0] for f in os.listdir(data_path)]
 
-# %% ../nbs/00_task.ipynb 27
+# %% ../nbs/00_task.ipynb 26
 train_tasks = get_task_files('train')
 eval_tasks = get_task_files('eval')
