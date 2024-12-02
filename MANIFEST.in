@@ -3,3 +3,5 @@ include LICENSE
 include CONTRIBUTING.md
 include README.md
 recursive-exclude * __pycache__
+recursive-include */arc_data/data/training *
+recursive-include */arc_data/data/evaluation *

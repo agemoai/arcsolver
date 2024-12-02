@@ -6,11 +6,9 @@
 This library contains tools for visualizing, analyzing and solving tasks
 from the Abstraction and Reasoning Corpus (ARC) challenge dataset.
 
-It was built using `nbdev` and `claudette`.
+Interaction with Claude
 
-## Usage
-
-### Installation
+## Installation
 
 Install latest from the GitHub
 [repository](https://github.com/agemoai/arcsolver):
@@ -52,7 +50,7 @@ task = ArcTask('1e0a9b12'); task.plot()
 ![](index_files/figure-commonmark/cell-2-output-1.png)
 
 An [`ArcTask`](https://agemoai.github.io/arcsolver/task.html#arctask)
-comprises a list of input-example
+comprises a list of input-output example
 [`ArcPair`](https://agemoai.github.io/arcsolver/task.html#arcpair)s,
 each of which holds two
 [`ArcGrid`](https://agemoai.github.io/arcsolver/task.html#arcgrid)s.

@@ -1,3 +1,13 @@
 [build-system]
 requires = ["setuptools>=64.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["arcsolver"]
+zip_safe = false
+
+[tool.setuptools.package-data]
+"*" = [
+    "**/arc_data/data/training/*",
+    "**/arc_data/data/evaluation/*"
+]
