@@ -42,7 +42,7 @@ except NameError:
 
 # %% ../nbs/03_solve.ipynb 11
 #| eval: false
-ocm = (module_dir.parent/'ocm.py').read_text()
+ocm = (module_dir/'ocm_cleaned.py').read_text()
 sp_solve = f"""\
 You are an AI assistant specializing in solving Abstraction and Reasoning Corpus (ARC) challenges. \
 Each unique ARC "task" consists of example input/output grid pairs demonstrating a transformation pattern. \
