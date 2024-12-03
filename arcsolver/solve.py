@@ -22,23 +22,19 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Set, Dict, Callable
 import ast
 from concurrent.futures import ProcessPoolExecutor
-import time
 import subprocess
 import tempfile
 from pathlib import Path
 import pickle
 import textwrap
-import os
 import base64
 import sys
 import logging
 import random
+import importlib.resources as resources
 
 # %% ../nbs/03_solve.ipynb 5
-try:
-    module_dir = Path(os.path.dirname(__file__))
-except NameError:
-    module_dir = Path(os.getcwd())
+module_dir = resources.files('arcsolver')
 
 # %% ../nbs/03_solve.ipynb 11
 #| eval: false

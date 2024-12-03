@@ -12,12 +12,12 @@ from .utils import parse_from_xml
 from claudette import *
 from fastcore.utils import *
 from fastcore.meta import *
-from anthropic import Anthropic, AsyncAnthropic, AnthropicBedrock, AsyncAnthropicBedrock, AnthropicVertex, AsyncAnthropicVertex
+from anthropic import AsyncAnthropic, AsyncAnthropicBedrock, AsyncAnthropicVertex
 from anthropic.types import Usage
 import asyncio
 import numpy as np
 from dataclasses import dataclass
-from typing import Any, List, Dict, Optional
+from typing import List, Dict, Optional
 from scipy import ndimage
 
 # %% ../nbs/02_describe.ipynb 8

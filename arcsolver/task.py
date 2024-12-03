@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt
 from matplotlib.transforms import Bbox
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from io import BytesIO
-import base64
 import importlib.resources as resources
 
 # %% ../nbs/00_task.ipynb 4
@@ -66,7 +65,7 @@ class ArcGrid:
         self._draw_grid(ax, max_width, max_height)
 
         if created_fig and to_base64:
-            buffer = io.BytesIO()
+            buffer = BytesIO()
             fig.savefig(buffer, format='png', bbox_inches='tight', 
                        facecolor='white', transparent=False, **kwargs)
             plt.close(fig)
@@ -185,7 +184,7 @@ class ArcPair:
         if subplot_spec is None:
             self._create_separator(fig, axes[0].get_position(), axes[1].get_position())
             if to_base64:
-                buffer = io.BytesIO()
+                buffer = BytesIO()
                 fig.savefig(buffer, format='png', bbox_inches='tight',
                            # facecolor='#F0F0F0', transparent=False,
                             **kwargs)
@@ -273,7 +272,7 @@ class ArcTask:
                      fig=fig, subplot_spec=gs[i])
     
         if to_base64:
-            buffer = io.BytesIO()
+            buffer = BytesIO()
             fig.savefig(buffer, format='png', bbox_inches='tight',
                        # facecolor='#F0F0F0', transparent=False, 
                         **kwargs)
