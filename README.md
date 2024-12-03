@@ -6,22 +6,35 @@
 This library contains tools for visualizing, analyzing and solving tasks
 from the Abstraction and Reasoning Corpus (ARC) challenge dataset.
 
-Interaction with Claude
+As this library was built using
+[`nbdev`](https://github.com/AnswerDotAI/claudette.git), the source code
+can be found in the jupyter notebooks directory
+([nbs](https://github.com/agemoai/arcsolver/tree/main/nbs)).
+
+Full documentation available at https://agemoai.github.io/arcsolver.
 
 ## Installation
 
-Install latest from the GitHub
-[repository](https://github.com/agemoai/arcsolver):
+1.  Install `claudette` from its GitHub
+    [repository](https://github.com/AnswerDotAI/claudette) (PyPi version
+    is a bit behind):
 
 ``` sh
-$ pip install git+https://github.com/agemoai/arcsolver.git
+$ pip install git+https://github.com/AnswerDotAI/claudette.git@5ea3a59
 ```
 
-or from [pypi](https://pypi.org/project/arcsolver/)
+2.  Install `arcsolver`:
 
 ``` sh
 $ pip install arcsolver
 ```
+
+> [!NOTE]
+>
+> To use the automated description or solution generation features of
+> this library, access to Anthropic’s Claude Sonnet 3.5 model is
+> required. Set the `ANTHROPIC_API_KEY` environment variable or
+> configure appropriate credentials for AWS bedrock or Google Vertex.
 
 ## Key Features
 
@@ -55,7 +68,7 @@ comprises a list of input-output example
 each of which holds two
 [`ArcGrid`](https://agemoai.github.io/arcsolver/task.html#arcgrid)s.
 Each class has convenient `plot` methods for visualization or directly
-outputting to base64-encoded strings that can be passed to Claude
+outputting to binary strings that can be passed to Claude.
 
 ``` python
 print(f"Input grid 1 plot: {task.train[0].input.plot(to_base64=True)[:20]}...")
@@ -66,7 +79,7 @@ print(f"Input grid 1 plot: {task.train[0].input.plot(to_base64=True)[:20]}...")
 ### Object-centric Models
 
 The `ocm` module provides a set of primitive classes for constructing
-object-centric models of ARC grids
+object-centric models of ARC grids. For example:
 
 ``` python
 from arcsolver.ocm import Vector, Rectangle, Line, Grid, Color, Direction
@@ -89,17 +102,27 @@ ArcGrid(grid.to_array()).plot()
 Use Claude to analyze and describe ARC tasks
 
 ``` python
-model = 'claude-3-5-sonnet-20241022-v2:0'
-```
-
-``` python
 from arcsolver.describe import DescriptionGenerator
 
-describer = DescriptionGenerator(model, client_type='bedrock')
+describer = DescriptionGenerator()
 d = await describer.describe_task(task, 1); print(d[0].d)
 ```
 
-    The input grids contain various colored squares arranged in different patterns against a black background. The transformation applies a "gravity" effect where all colored squares fall to the bottom row while maintaining their relative left-to-right ordering. Vertical sequences of the same color in the same column compress into a single square in the bottom row. All rows above the bottom row become black except where vertical sequences of the same color maintain connectivity.
+> The input grids contain various colored squares arranged on a black
+> background in different positions. In the transformation, all colored
+> squares “fall” vertically to the bottom row while maintaining their
+> relative horizontal positions and original colors. The rest of the
+> grid becomes filled with black squares, resulting in an output where
+> all non-black squares are aligned in the bottom row, preserving their
+> left-to-right ordering from the input grid.
+
+> [!WARNING]
+>
+> Depending on the task and the description strategy used (see
+> [docs](https://agemoai.github.io/arcsolver/describe.html)),
+> [`DescriptionGenerator`](https://agemoai.github.io/arcsolver/describe.html#descriptiongenerator)
+> may decompose the task into multiple images, resulting in a
+> token-intensive prompt (~\$0.10 using Sonnet 3.5).
 
 ### Solution Generation
 
@@ -109,8 +132,8 @@ refining its attempts based on execution and prediction error feedback.
 ``` python
 from arcsolver.solve import ArcSolver
 
-solver = ArcSolver(model, 'bedrock')
-solutions = await solver.solve(task, )
+solver = ArcSolver()
+solutions = await solver.solve(task)
 ```
 
 
