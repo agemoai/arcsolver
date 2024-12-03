@@ -4,7 +4,7 @@
 
 # %% auto 0
 __all__ = ['ocm', 'sp_solve', 'Solution', 'CodeValidator', 'Attempt', 'ExecutionResult', 'SandboxedExecutor',
-           'ConcurrentExecutor', 'run_solutions', 'feedback', 'ArcSolver']
+           'ConcurrentExecutor', 'run_solutions', 'feedback', 'SolutionTree', 'ArcSolver']
 
 # %% ../nbs/03_solve.ipynb 4
 from .task import ArcTask, train_tasks, ArcGrid, ArcPair
@@ -32,6 +32,7 @@ import sys
 import logging
 import random
 import importlib.resources as resources
+from treelib import Tree
 
 # %% ../nbs/03_solve.ipynb 5
 module_dir = resources.files('arcsolver')
@@ -724,6 +725,110 @@ async def retry_solution(
 
 # %% ../nbs/03_solve.ipynb 56
 @dataclass
+class SolutionTree:
+    "Store full tree of solution attempts for an ARC task"
+    task: ArcTask                # The task being solved
+    roots: List[Attempt]         # List of root attempts (one per description)
+    total_cost: float            # Total cost of all attempts
+    n_attempts: int              # Total number of attempts
+
+    def _collect_attempts(self, root: Attempt) -> List[Attempt]:
+        "Recursively collect all attempts in a tree branch"
+        return [attempt for child in root.children 
+                for attempt in ([child] + self._collect_attempts(child))]
+    
+    @property
+    def all_attempts(self) -> List[Attempt]:
+        "Get flattened list of all attempts across all branches"
+        return [attempt for root in self.roots 
+                for attempt in self._collect_attempts(root)]
+    
+    @property
+    def correct(self) -> List[Attempt]:
+        "Get list of successful attempts, if any"
+        return [a for a in self.all_attempts 
+                if hasattr(a, 'correct') and a.correct]
+    
+    @property 
+    def best_attempt(self) -> Optional[Attempt]:
+        "Get attempt with highest score"
+        scored = [a for a in self.all_attempts if a.result is not None]
+        return max(scored, key=lambda x: x.score) if scored else None
+    
+    @property
+    def best_score(self) -> float:
+        "Get highest score achieved"
+        return self.best_attempt.score if self.best_attempt else 0.0
+    
+    def __str__(self):
+        status = "Solved" if self.correct else "Unsolved"
+        return (f"ArcTask {self.task.task_id} ({status})\n"
+                f"Attempts: {self.n_attempts}\n"
+                f"Correct: {len(self.correct)}\n"
+                f"Best Score: {self.best_score:.3f}\n"
+                f"Total Cost: ${self.total_cost:.3f}")
+    __repr__ = __str__
+
+    def show(self, scores_only: bool = False):
+        "Visualize attempt tree structure using treelib"
+        tree = Tree()
+        
+        # Add task as root
+        tree.create_node(
+            f"Task {self.task.task_id}",
+            "task"
+        )
+        
+        # Add descriptions as first level
+        for i, root in enumerate(self.roots):
+            desc_id = f"desc_{i}"
+            if scores_only:
+                label = f"Description {i+1}"
+            else:
+                method = root.description.method
+                cost = f"${root.description.cost:.3f}"
+                label = f"Description {i+1} ({method}, {cost})"
+            tree.create_node(label, desc_id, parent="task")
+            
+            # Add attempts under each description
+            for j, attempt in enumerate(root.children):
+                self._add_attempt_node(tree, attempt, desc_id, j, scores_only)
+        tree_str = tree.show(stdout=False)
+        if isinstance(tree_str, bytes):
+            tree_str = tree_str.decode('utf-8')
+        print(tree_str)
+    
+    def _add_attempt_node(self, tree: Tree, attempt: Attempt, 
+                         parent_id: str, idx: int, scores_only: bool):
+        "Recursively add attempt nodes to tree"
+        # Create unique ID for this attempt
+        attempt_id = f"{parent_id}_attempt_{idx}"
+        
+        # Create label based on attempt properties
+        if scores_only:
+            label = f"Score: {attempt.score:.3f}"
+            if hasattr(attempt, 'correct') and attempt.correct:
+                label += " 🎉"
+        else:
+            label_parts = [
+                f"Attempt {idx+1}",
+                f"Score: {attempt.score:.3f}",
+            ]
+            if attempt.chat is not None:
+                label_parts.append(f"Cost: ${attempt.chat.cost:.3f}")
+            if hasattr(attempt, 'correct') and attempt.correct:
+                label_parts.append("🎉")
+            label = " | ".join(label_parts)
+        
+        # Create node
+        tree.create_node(label, attempt_id, parent=parent_id)
+        
+        # Recursively add children
+        for i, child in enumerate(attempt.children):
+            self._add_attempt_node(tree, child, attempt_id, i, scores_only)
+
+# %% ../nbs/03_solve.ipynb 58
+@dataclass
 class SolverProgress:
     "Track progress of ARC task solution attempts"
     attempts: int              # Number of attempts so far
@@ -740,7 +845,7 @@ class SolverProgress:
     #             f"Best Score: {self.best_score:.3f} | "
     #             f"Cost: ${self.cost:.3f}")
 
-# %% ../nbs/03_solve.ipynb 57
+# %% ../nbs/03_solve.ipynb 59
 class ArcSolver:
     "(Attempt to) Solve an ARC task using Claude."
     def __init__(self,
@@ -832,7 +937,7 @@ class ArcSolver:
                     budget: int = 30,              # Maximum number of solution attempts
                     temp: float = 0.7,             # Temperature for generation
                     **kwargs                       # Additional kwargs passed to attempt/retry functions
-                   ) -> List[Solution]:            # Successful solutions found, if any
+                   ) -> SolutionTree:              # Tree structure of all attempts
         "Generate and iteratively refine solutions until success or budget exhausted."
         if isinstance(task, str): task = ArcTask(task)
 
@@ -888,15 +993,14 @@ class ArcSolver:
                         correct.append(a)
     
             n_attempts = self._count_attempts(roots)
-            status = ("Solution found!" if any(correct) else 
-                      "Continuing refinement..." if n_attempts < budget else
-                      "Budget exhausted")
-            self._log_progress(status, roots, n_attempts, budget, len(ds), 
-                            total_cost, bool(correct))
-            if any(correct): break
+            if not any(correct):
+                if n_attempts > budget:
+                    self._log_progress("Budget exhausted", roots, n_attempts, budget, len(ds), 
+                                       total_cost, bool(correct))
+            else: break
 
         status = "Solution found! 🎉" if any(correct) else "Failed to find solution."
         self._log_progress(status, roots, n_attempts, budget, len(ds), 
                         total_cost, bool(correct))
         
-        return correct
+        return SolutionTree(task=task, roots=roots, total_cost=total_cost, n_attempts=n_attempts)
