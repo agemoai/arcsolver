@@ -552,7 +552,7 @@ def _already_shown_task(chat_hist, task):
     for m in chat_hist:
         if isinstance(m, dict) and m['role'] == 'user':
             for d in m['content']:
-                if 'source' in d.keys():
+                if isinstance(d, dict) and 'source' in d.keys():
                     if d['source']['data'] == base64.b64encode(task.plot(to_base64=True)).decode("utf-8"):
                         return True
     return False
