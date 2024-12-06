@@ -20,8 +20,6 @@ class Vector(BaseModel):
     i: int
     j: int
 
-    model_config = {"frozen": True}
-
     def __init__(self, i: int, j: int):
         super().__init__(i=i, j=j)
 
@@ -45,8 +43,6 @@ class Color(BaseModel):
     "Represents a color using an integer value (0-9) or a color name."
     value: int = Field(..., ge=0, le=9)
     colors: ClassVar[List[str]] = ['black', 'blue', 'red', 'green', 'yellow', 'grey', 'pink', 'orange', 'cyan', 'brown']
-
-    model_config = {"frozen": True}
     
     def __init__(self, value: Union[int, str]):
         if isinstance(value, str): value = self.colors.index(value.lower())
