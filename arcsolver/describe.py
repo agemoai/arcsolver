@@ -20,10 +20,10 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional
 from scipy import ndimage
 
-# %% ../nbs/02_describe.ipynb 8
+# %% ../nbs/02_describe.ipynb 7
 from toolslm.funccall import get_schema
 
-# %% ../nbs/02_describe.ipynb 9
+# %% ../nbs/02_describe.ipynb 8
 @patch
 async def __call__(self:AsyncChat,
         pr=None,  # Prompt / message
@@ -39,7 +39,7 @@ async def __call__(self:AsyncChat,
     self.h += mk_toolres(self.c.result, ns=self.tools)  #, obj=self)
     return res
 
-# %% ../nbs/02_describe.ipynb 11
+# %% ../nbs/02_describe.ipynb 10
 sp_direct = """\
 You are an expert at solving visual IQ puzzles involving transformations between input and output colored grids. \
 Your task is to analyze images of puzzles and provide concise, accurate solutions. To solve a given puzzle, follow these steps:
@@ -130,14 +130,14 @@ Your goal is to provide a clear, concise, and accurate description that captures
 transformation rule while being general enough to work across all examples. Remember to close xml tags.
 """
 
-# %% ../nbs/02_describe.ipynb 14
+# %% ../nbs/02_describe.ipynb 13
 def _shape_table(pairs: List[ArcPair]  # List of training example pairs
                 ) -> str:              # string containing a table of grid shapes
     header = "| Input Shape | Output Shape |\n|------------|-------------|\n"
     rows = "\n".join(f"| {str(i.shape):<10} | {str(o.shape):<11} |" for i, o in pairs)
     return header + rows
 
-# %% ../nbs/02_describe.ipynb 19
+# %% ../nbs/02_describe.ipynb 18
 @dataclass
 class Description:
     "A single description of an ARC task."
@@ -153,15 +153,14 @@ class Description:
     @property
     def usage(self) -> Usage:
         "Get combined token usage for this description."
-        return sum((chat.use for chat in self.chats), 
-                  start=Usage(input_tokens=0, output_tokens=0))
+        return sum((chat.use for chat in self.chats), start=usage())
     
     @property 
     def cost(self) -> float:
         "Get total cost in USD for this description."
         return sum(chat.cost for chat in self.chats)
 
-# %% ../nbs/02_describe.ipynb 21
+# %% ../nbs/02_describe.ipynb 20
 def _create_client(client_type,
                    client_kwargs
                   ) -> Union[AsyncAnthropic, AsyncAnthropicBedrock, AsyncAnthropicVertex]:
@@ -172,17 +171,17 @@ def _create_client(client_type,
         return AsyncAnthropicVertex(**client_kwargs)
     else:  # default to standard Anthropic
         return AsyncAnthropic(
-            default_headers={'anthropic-beta': 'prompt-caching-2024-07-31'},
+            # default_headers={'anthropic-beta': 'prompt-caching-2024-07-31'},
             **client_kwargs
         )
 
-# %% ../nbs/02_describe.ipynb 22
+# %% ../nbs/02_describe.ipynb 21
 def _create_chat(model, client, sp: str, tools: Optional[list] = None) -> AsyncChat:
     "Create a new chat instance."
     cli = AsyncClient(model, client)
     return AsyncChat(cli=cli, sp=sp, tools=tools)
 
-# %% ../nbs/02_describe.ipynb 23
+# %% ../nbs/02_describe.ipynb 22
 async def _describe_direct(
     task: ArcTask | str,                        # Either an ArcTask object or a task ID string
     model: str = 'claude-3-5-sonnet-20241022',  # Model identifier (defaults to Sonnet 3.5)
@@ -208,7 +207,7 @@ async def _describe_direct(
     pr += f"\nThe colors present in the input grids are: {', '.join(Color.colors[i] for i in in_cols)}\n"
     pr += f"\nThe colors present in the output grids are: {', '.join(Color.colors[i] for i in out_cols)}"
     
-    r = await chat([task.plot(to_base64=True), pr],
+    r = await chat(mk_msg([task.plot(to_base64=True), pr], cache=client_type=='anthropic'),
                    prefill=prefill,
                    temp=temp,
                    **kwargs)
@@ -219,7 +218,7 @@ async def _describe_direct(
         method='direct'
     )
 
-# %% ../nbs/02_describe.ipynb 26
+# %% ../nbs/02_describe.ipynb 25
 sp_indiv = """\
 You are an expert puzzle analyst tasked with deciphering complex visual transformation puzzles. \
 You analyze and describe the patterns and distinct shapes contained in input and output grids \
@@ -305,7 +304,7 @@ Make your best guess considering the points above, and note any uncertainties in
 Remember to close xml tags.
 """
 
-# %% ../nbs/02_describe.ipynb 28
+# %% ../nbs/02_describe.ipynb 27
 def _pair_prompt(pair: ArcPair,  # A single training example pair from an ARC task
                 example_idx: int = 0,  # The index of the training example
                ):
@@ -326,7 +325,7 @@ output grid (right):
 - colors: {', '.join(Color.colors[i] for i in np.unique(outp.data))}\
 """
 
-# %% ../nbs/02_describe.ipynb 31
+# %% ../nbs/02_describe.ipynb 30
 class ShapeExtractor:
     """Extract shapes from grid pairs for analysis."""
     def __init__(self, task: ArcTask):
@@ -357,7 +356,7 @@ class ShapeExtractor:
         regions = [[np.sum(mask[s]), s, labeled[s] == i+1] for i, s in enumerate(slices)]
         return [(r[2], (r[1][0].start, r[1][1].start)) for r in regions]
 
-# %% ../nbs/02_describe.ipynb 33
+# %% ../nbs/02_describe.ipynb 32
 @patch
 @delegates(AsyncChat.__call__)
 async def toolloop(self:AsyncChat,
@@ -377,7 +376,7 @@ async def toolloop(self:AsyncChat,
     if trace_func: trace_func(self.h[n_msgs:])
     return r
 
-# %% ../nbs/02_describe.ipynb 38
+# %% ../nbs/02_describe.ipynb 37
 sp_merge = """\
 You are an expert puzzle analyst tasked with deciphering complex visual transformation puzzles. \
 Your goal is to infer the general rule that governs how an input grid is transformed into an output grid \
@@ -442,7 +441,7 @@ If multiple interpretations are possible, choose the simplest one that explains 
 Remember to close xml tags.
 """
 
-# %% ../nbs/02_describe.ipynb 39
+# %% ../nbs/02_describe.ipynb 38
 async def _describe_indirect(
     task: ArcTask | str,                        # Either an ArcTask object or a task ID string
     model: str = 'claude-3-5-sonnet-20241022',  # Model identifier (defaults to Sonnet 3.5)
@@ -472,7 +471,7 @@ async def _describe_indirect(
     
     # Process examples concurrently
     pair_tasks = [
-        chat.toolloop([pair.plot(to_base64=True), _pair_prompt(pair, i)], temp=temp)
+        chat.toolloop(mk_msg([pair.plot(to_base64=True), _pair_prompt(pair, i)], cache=client_type=='anthropic'), temp=temp)
         for i, (chat, pair) in enumerate(zip(pair_chats, task.train))
     ]
     responses = await asyncio.gather(*pair_tasks)
@@ -493,7 +492,7 @@ async def _describe_indirect(
         method='indirect'
     )
 
-# %% ../nbs/02_describe.ipynb 42
+# %% ../nbs/02_describe.ipynb 41
 class DescriptionGenerator:
     "Generates descriptions of ARC tasks using Claude."
     def __init__(self, 
@@ -518,7 +517,7 @@ class DescriptionGenerator:
         "Create a new chat instance."
         return _create_chat(self.model, self._create_client(), sp, tools)
 
-# %% ../nbs/02_describe.ipynb 45
+# %% ../nbs/02_describe.ipynb 44
 @patch
 async def describe_direct(
     self: DescriptionGenerator,
@@ -535,7 +534,7 @@ async def describe_direct(
     ]
     return await asyncio.gather(*tasks)
 
-# %% ../nbs/02_describe.ipynb 54
+# %% ../nbs/02_describe.ipynb 53
 @patch
 async def describe_indirect(
     self: DescriptionGenerator,
@@ -552,7 +551,7 @@ async def describe_indirect(
     ]
     return await asyncio.gather(*tasks)
 
-# %% ../nbs/02_describe.ipynb 65
+# %% ../nbs/02_describe.ipynb 64
 @patch
 async def describe_task(
     self: DescriptionGenerator,

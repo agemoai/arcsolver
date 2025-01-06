@@ -37,7 +37,7 @@ from treelib import Tree
 # %% ../nbs/03_solve.ipynb 5
 module_dir = resources.files('arcsolver')
 
-# %% ../nbs/03_solve.ipynb 11
+# %% ../nbs/03_solve.ipynb 12
 #| eval: false
 ocm = (module_dir/'ocm_cleaned.py').read_text()
 sp_solve = f"""\
@@ -126,7 +126,7 @@ This is an iterative process. The user will feed back execution or prediction er
 Learn from each attempt and refine your approach accordingly.\
 """
 
-# %% ../nbs/03_solve.ipynb 12
+# %% ../nbs/03_solve.ipynb 13
 @dataclass
 class Solution:
     "Code components of a single ARC solution attempt."
@@ -154,18 +154,18 @@ class Solution:
             output_model=parse_from_xml(r, 'output_model'),
         )
 
-# %% ../nbs/03_solve.ipynb 15
+# %% ../nbs/03_solve.ipynb 16
 class ValidationError(SyntaxError):
-    """Custom validation error that behaves like SyntaxError for clean tracebacks"""
+    "Custom validation error that behaves like SyntaxError for clean tracebacks"
     pass
 
-# %% ../nbs/03_solve.ipynb 16
+# %% ../nbs/03_solve.ipynb 17
 class CodeValidator:
-    """Validates that ARC solution code has required classes and methods"""
+    "Validates that ARC solution code has required classes and methods"
     
     @staticmethod
     def format_syntax_error(code: str, e: SyntaxError) -> str:
-        """Formats a syntax error with context"""
+        "Formats a syntax error with context"
         lineno = getattr(e, 'lineno', 1)
         lines = code.splitlines()
         
@@ -229,7 +229,7 @@ class CodeValidator:
         if 'from_input' not in classes['OutputModel']['methods']:
             raise ValidationError("OutputModel missing @classmethod from_input")
 
-# %% ../nbs/03_solve.ipynb 21
+# %% ../nbs/03_solve.ipynb 23
 @patch
 @delegates(AsyncChat.__call__)
 async def codeloop(
@@ -277,11 +277,11 @@ async def codeloop(
         f"Last error: {type(last_error).__name__} - {str(last_error)}"
     )
 
-# %% ../nbs/03_solve.ipynb 22
+# %% ../nbs/03_solve.ipynb 24
 class ExecutionResult:
     ...
 
-# %% ../nbs/03_solve.ipynb 23
+# %% ../nbs/03_solve.ipynb 25
 @dataclass
 class Attempt:
     "An attempt at solving an ARC task."
@@ -295,7 +295,7 @@ class Attempt:
     result: Optional[ExecutionResult] = None                 # Result of executing the solution code
     error: Optional[str] = None                              # Error trying to generate solution code
 
-# %% ../nbs/03_solve.ipynb 26
+# %% ../nbs/03_solve.ipynb 28
 async def attempt_solution(
     root: Attempt,                              # `Attempt` object containing the task and description to generate solutions for
     model: str = 'claude-3-5-sonnet-20241022',  # Model identifier (defaults to Sonnet 3.5)
@@ -320,7 +320,8 @@ async def attempt_solution(
                        f"</new_primitives>\n\n<input_model>\n{e.input_model}\n</input_model>\n\n"
                        f"<output_model>\n{e.output_model}\n</output_model>"))
     try:
-        r = await chat.codeloop(root.description.d, temp=temp, max_attempts=max_attempts, **kwargs)
+        r = await chat.codeloop(mk_msg(root.description.d, cache=client_type=='anthropic'),
+                                temp=temp, max_attempts=max_attempts, **kwargs)
         a = Attempt(task=root.task, description=root.description, depth=1, solution=r, chat=chat, parent=root)
         root.children.append(a)
         return a
@@ -329,18 +330,18 @@ async def attempt_solution(
         root.children.append(a)
         return a
 
-# %% ../nbs/03_solve.ipynb 29
+# %% ../nbs/03_solve.ipynb 32
 @dataclass
 class ExecutionResult:
     "Contains all results from a solution attempt execution"
     in_preds: Optional[List[ArcGrid]] = None     # from InputModel.from_array(...).to_array()
     out_preds: Optional[List[ArcGrid]] = None    # from OutputModel.from_input(...).to_array()
-    error: Optional[str] = None                 # Overall code execution error
-    example_errors: Optional[List[str]] = None  # Per-example errors
+    error: Optional[str] = None                  # Overall code execution error
+    example_errors: Optional[List[str]] = None   # Per-example errors
 
-# %% ../nbs/03_solve.ipynb 31
+# %% ../nbs/03_solve.ipynb 34
 class SandboxedExecutor:
-    """Executes ARC solutions in a separate Python process with detailed results"""
+    "Executes ARC solutions in a separate Python process with detailed results"
 
     IMPORTS = """
 from arcsolver.ocm import *
@@ -506,7 +507,7 @@ if __name__ == '__main__':
             # Clean up runner script
             Path(runner_path).unlink()
 
-# %% ../nbs/03_solve.ipynb 36
+# %% ../nbs/03_solve.ipynb 39
 def _run_single_attempt(args):
     "Helper function to run a single attempt (must be at module level for pickling)"
     return SandboxedExecutor().run(*args)
@@ -527,7 +528,7 @@ class ConcurrentExecutor:
             results = list(pool.map(_run_single_attempt, args))
         return results
 
-# %% ../nbs/03_solve.ipynb 37
+# %% ../nbs/03_solve.ipynb 40
 def run_solutions(sols: List[Solution],           # List of `Solution` objects to execute
                   task: ArcTask,                  # ARC task to test against
                   split: str = 'train',           # 'train' or 'test'
@@ -537,7 +538,7 @@ def run_solutions(sols: List[Solution],           # List of `Solution` objects t
     executor = ConcurrentExecutor(max_workers=max_workers)
     return executor.run_attempts(sols, task, split)
 
-# %% ../nbs/03_solve.ipynb 41
+# %% ../nbs/03_solve.ipynb 44
 @patch(as_prop=True)
 def score(self: Attempt) -> float:
     if self.result is not None and self.result.error is None:
@@ -548,7 +549,7 @@ def score(self: Attempt) -> float:
     else:
         return 0.0
 
-# %% ../nbs/03_solve.ipynb 46
+# %% ../nbs/03_solve.ipynb 49
 def _already_shown_task(chat_hist, task):
     for m in chat_hist:
         if isinstance(m, dict) and m['role'] == 'user':
@@ -558,7 +559,7 @@ def _already_shown_task(chat_hist, task):
                         return True
     return False
 
-# %% ../nbs/03_solve.ipynb 47
+# %% ../nbs/03_solve.ipynb 50
 def _image_message(l: list,               # list of indexes corresponding to candidate plots
                    res: ExecutionResult,  # Result of running execution
                    in_out: str,           # 'input' or 'output'
@@ -581,7 +582,7 @@ def _image_message(l: list,               # list of indexes corresponding to can
            f"{l[idx]+1}.\n")
     return viz, fb
 
-# %% ../nbs/03_solve.ipynb 48
+# %% ../nbs/03_solve.ipynb 51
 def feedback(attempt: Attempt,  # Incorrect attempt
             ) -> list:          # feedback prompt for claudette, maybe including an image of an incorrect prediction
     "Generate feedback message for Claude based on execution results"
@@ -690,7 +691,22 @@ def feedback(attempt: Attempt,  # Incorrect attempt
     else: return [task.plot(to_base64=True), viz, fb + retry] if viz is not None else [fb + retry]
 
 
-# %% ../nbs/03_solve.ipynb 50
+# %% ../nbs/03_solve.ipynb 53
+def clear_cache(hist: list  # chat history
+               ) -> list:
+    "Make sure there are at most 3 cache points in a conversation history"
+    num_caches = 0
+    for x in hist[::-1]:
+        if isinstance(x, dict):
+            if not isinstance(x['content'], list): print('expected list')
+            for y in x['content']:
+                if isinstance(y, dict):
+                    if 'cache_control' in y:
+                        num_caches += 1
+                        if num_caches >= 4: del y['cache_control']
+    return hist
+
+# %% ../nbs/03_solve.ipynb 54
 async def retry_solution(
     attempt: Attempt,                           # Previous (incorrect) attempt
     model: str = 'claude-3-5-sonnet-20241022',  # Model identifier (defaults to Sonnet 3.5)
@@ -699,7 +715,7 @@ async def retry_solution(
     sp: Optional[str] = None,                   # Custom system prompt (if None, uses `sp_solve`)
     prefill: str = "<reasoning>",               # Text to prefill assistant's response with
     temp: float = 0.7,                          # Temperature for generation (higher for diversity)
-    max_attempts: int = 3,                      # Maximum attempts per description (if attempts fail xml/syntax parsing)
+    max_attempts: int = 3,                      # Maximum attempts (if attempts fail xml/syntax parsing)
     **kwargs                                    # Additional arguments passed to AsyncChat.codeloop
 ) -> Attempt:
     "Retry constructing a solution based on feedback from a previous incorrect attempt"
@@ -707,13 +723,13 @@ async def retry_solution(
 
     client = _create_client(client_type, client_kwargs)
     chat = _create_chat(model, client, sp)
-    chat.h = attempt.chat.h.copy()
+    chat.h = clear_cache(attempt.chat.h.copy()) if client_type=='anthropic' else attempt.chat.h.copy()
 
     fb = feedback(attempt)
 
     try:
         r = await chat.codeloop(
-            fb, prefill=prefill, stop='</output_model>', temp=temp, max_attempts=max_attempts, **kwargs
+            mk_msg(fb, cache=client_type=='anthropic'), prefill=prefill, stop='</output_model>', temp=temp, max_attempts=max_attempts, **kwargs
         )
         a = Attempt(task=attempt.task, description=attempt.description, depth=attempt.depth + 1, solution=r, chat=chat, parent=attempt)
         attempt.children.append(a)
@@ -723,7 +739,7 @@ async def retry_solution(
         attempt.children.append(a)
         return a
 
-# %% ../nbs/03_solve.ipynb 56
+# %% ../nbs/03_solve.ipynb 60
 @dataclass
 class SolutionTree:
     "Store full tree of solution attempts for an ARC task"
@@ -827,7 +843,7 @@ class SolutionTree:
         for i, child in enumerate(attempt.children):
             self._add_attempt_node(tree, child, attempt_id, i, scores_only)
 
-# %% ../nbs/03_solve.ipynb 58
+# %% ../nbs/03_solve.ipynb 62
 @dataclass
 class SolverProgress:
     "Track progress of ARC task solution attempts"
@@ -845,7 +861,7 @@ class SolverProgress:
     #             f"Best Score: {self.best_score:.3f} | "
     #             f"Cost: ${self.cost:.3f}")
 
-# %% ../nbs/03_solve.ipynb 59
+# %% ../nbs/03_solve.ipynb 63
 class ArcSolver:
     "(Attempt to) Solve an ARC task using Claude."
     def __init__(self,
